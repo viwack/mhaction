@@ -1,0 +1,26 @@
+{
+    "id": "08DF3E7C",
+    "path": "~/Documents/mhc/app.R",
+    "project_path": "app.R",
+    "type": "r_source",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1731352535041.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "8,15",
+        "scrollLine": "39"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1731352621,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1731352621348,
+    "read_only": false,
+    "read_only_alternatives": []
+}
