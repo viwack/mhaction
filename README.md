@@ -1,5 +1,5 @@
 # **Empowering Advocacy through Data: Mapping Manufactured Housing Communities with MHAction and CTAC**
-
+##### For more documentation, see [here](https://docs.google.com/document/d/1hdKrkJ26ZqeqZhwxsKdDHvpodZChCjNMaRl18Y6Mxxk/edit?tab=t.0). \
 **The Project**
 In collaboration with MHAction, Ginsberg's Community Technical Assistance Collaborative (CTAC) developed an innovative web-based mapping application that visualizes manufactured housing communities (MHCs) across Michigan. The project aim was to create an accessible tool that could assist in the organization’s advocacy for affordable and quality manufactured housing, and to bolster their broader campaigns for racial and economic justice.
 
@@ -14,5 +14,5 @@ Through this project, we've learned the importance of making complex data access
 
 For more information, visit the Michigan Manufactured Housing Communities Mapping Tool here: https://vwang.shinyapps.io/mhaction/.
 
-CTAC: https://ginsberg.umich.edu/ctac
+CTAC: https://ginsberg.umich.edu/ctac \
 MHACTION: https://www.mhaction.org/
