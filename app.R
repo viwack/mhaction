@@ -1,35 +1,50 @@
-library(leaflet)
-library(shiny)
-library(bslib)
-library(readr)
-library(stringr)
-library(sf)
-library(dplyr)
-library(ggplot2)
-library(scales)
-library(shinydashboard)
-library(htmltools)
-library(tigris)
+#install.packages("shinydashboard")
 
-house <- st_read("Michigan_State_House_Districts_2021.json")
-senate <- st_read("Michigan_State_Senate_Districts_2021.json")
+library(leaflet) #mapping package
+library(shiny) #builds web application
+library(bslib) #interactive widgets
+library(readr) #helps read the files
+library(stringr) #supports with cleaning the files
+library(sf) #dataframe objects
+library(dplyr) #data manip
+library(ggplot2) #data viz
+library(scales) #supports data viz
+library(shinydashboard) #supports web UI
+library(htmltools) #when building the website makes it easier
+library(tigris) #contains geographical information
 
-house_districts <- read_sf("Michigan_State_House_Districts_2021.json")
+#Reads in the files used to create the map layers for these districts. I DONT THINK I ACTUALLY ENDED UP USING THESE FOR SOME REASON
+house <- st_read("Michigan_State_House_Districts_2021.json") # Map Layer (Geographic Boundaries) - it changes every 10 years so don't have to change
+senate <- st_read("Michigan_State_Senate_Districts_2021.json") 
+
+#Reads in the files used to create the map layers for these districts.
+house_districts <- read_sf("Michigan_State_House_Districts_2021.json")  # Map Layer (Geographic Boundaries) - it changes every 10 years so don't have to change
 senate_districts <- read_sf("Michigan_State_Senate_Districts_2021.json")
 
-mhvillage_df <- read_csv("mhvillage_2025.csv")
+#Read in the file of mhvillage-scraped data
+mhvillage_df <- read_csv("MHVillageDec7_Legislative1.csv") # Keeping as old data
+mhvillage_df$Sites <- as.integer(mhvillage_df$Sites)
 
-lara_df <- read_csv("lara_withcoord_with_districts2025.csv")
+#Read in the LARA data file (CHANGE THIS FILENAME TO YOURS)
+lara_df <- read_csv("lara_house-senate_districts_coords_2026.csv") # Updated Data: I can get this on CTAC Drive -> reformat as Vicky's / (Lat,Long) Location Address, use R package to find the corresponding lat/long
 lara_df$County <- str_to_title(lara_df$County)
+lara_df$`House district` <- as.integer(lara_df$`House district`)
+lara_df$`Senate district` <- as.integer(lara_df$`Senate district`)
 
-mhvillage_simple <- read_csv("mhvillage_simple2025.csv)
-mhvillage_simple$Sites <- as.integer(mhvillage_simple$Sites")
+#Run App: check the result as a web screen
 
-lara_simple <- read_csv("lara_simple2025.csv")
+#Read in the simplified files for each that just contains less mess
+# mhvillage_simple <- read_csv("mi_parks from MHVillage 2-5-25.xlsx") #Delete the Columns in MHVillageDec7_Legislative1.csv (If I keep old, this would be same)
+# mhvillage_simple$Sites <- as.integer(mhvillage_simple$Sites)
 
+# lara_simple <- read_csv("LARA_simple.csv") 
+# lara_simple$County <- str_to_title(lara_simple$County)
+
+#Obtains information so that we can look at county MHC counts
 mi_counties <- counties(state = "MI")
 mi_counties$NAME <- sort(mi_counties$NAME)
 
+#function that creates the first graph under the Infographics tab.
 build_infographics1 <- function(lara_df) {
   total_sites_by_county <- lara_df %>%
     filter(!is.na(`Total_#_Sites`)) %>%
@@ -43,7 +58,7 @@ build_infographics1 <- function(lara_df) {
   plot <- ggplot(top_20, aes(x = Total_Sites, y = reorder(County, Total_Sites))) +
     geom_bar(stat = "identity", fill = "cadetblue4", color = "cadetblue4") +
     labs(
-      title = "Top 20 Counties by Number of MHCs (LARA)",
+      title = "Top 20 Counties by Number of MHCs, 2026 (LARA)",
       x = "Total Number of Sites",
       y = "County"
     ) +
@@ -53,44 +68,47 @@ build_infographics1 <- function(lara_df) {
   return(plot)
 }
 
-# build_infographics2 <- function(mhvillage_df) {
-#   # Calculate mean Average_rent by County
-#   total_sites_by_name <- mhvillage_df %>%
-#     group_by(County) %>%
-#     summarise(Average_rent = mean(Average_rent, na.rm = TRUE)) %>%
-#     filter(!is.na(Average_rent)) %>%
-#     arrange(Average_rent)
-#   
-#   # Create a clean DataFrame and count number of sites per county
-#   df_clean <- mhvillage_df %>%
-#     select(County, Average_rent) %>%
-#     filter(!is.na(Average_rent))
-#   
-#   county_counts <- df_clean %>%
-#     count(County)
-#   
-#   # Merge the DataFrames
-#   total_sites_by_name_count <- merge(total_sites_by_name, county_counts, by = "County")
-#   
-#   # Sort and select top 20 counties by count of sites
-#   total_sites_by_name_20 <- total_sites_by_name_count %>%
-#     arrange(desc(n)) %>%
-#     head(20) %>%
-#     arrange(desc(Average_rent))
-#   
-#   # Create the plot
-#   ax <- ggplot(total_sites_by_name_20, aes(x = Average_rent, y = reorder(County, Average_rent))) +
-#     geom_bar(stat = "identity", fill = "cadetblue4") +
-#     labs(x = "Average Rent ($)", y = "County", title = "Average rent by county (MHVillage)") +
-#     theme_minimal() +
-#     geom_text(aes(label = n), hjust = -0.2, color = "black", size = 4)
-#   
-#   
-#   # Print the plot
-#   print(ax)
-# }
+#function that creates the second graph under the Infographics tab.
+build_infographics2 <- function(mhvillage_df) {
+  # Calculate mean Average_rent by County
+  total_sites_by_name <- mhvillage_df %>%
+    group_by(County) %>%
+    summarise(Average_rent = mean(Average_rent, na.rm = TRUE)) %>%
+    filter(!is.na(Average_rent)) %>%
+    arrange(Average_rent)
+  
+  # Create a clean DataFrame and count number of sites per county
+  df_clean <- mhvillage_df %>%
+    select(County, Average_rent) %>%
+    filter(!is.na(Average_rent))
+  
+  county_counts <- df_clean %>%
+    count(County)
+  
+  # Merge the DataFrames
+  total_sites_by_name_count <- merge(total_sites_by_name, county_counts, by = "County")
+  
+  # Sort and select top 20 counties by count of sites
+  total_sites_by_name_20 <- total_sites_by_name_count %>%
+    arrange(desc(n)) %>%
+    head(20) %>%
+    arrange(desc(Average_rent))
+  
+  # Create the plot
+  ax <- ggplot(total_sites_by_name_20, aes(x = Average_rent, y = reorder(County, Average_rent))) +
+    geom_bar(stat = "identity", fill = "cadetblue4") +
+    labs(x = "Average Rent ($)", y = "County", title = "Average rent by county (MHVillage)") +
+    theme_minimal() +
+    geom_text(aes(label = paste0("$", trunc(Average_rent,2)), hjust = -0.2))
+  
+  
+  # Print the plot
+  print(ax)
+}
 
+#function that, depending on the users' selections, creates the corresponding markers needed to be displayed on the map
 build_marker_layer <- function(map, layer_name) {
+  #so this part is if you clicked for mhvillage markers
   if (layer_name == "MHVillage Markers (includes site info)") {
     mhvillage_df$label <- paste(
       "Name: ", as.character(mhvillage_df$Name),
@@ -99,13 +117,12 @@ build_marker_layer <- function(map, layer_name) {
       br(),
       "Address: ", mhvillage_df$FullstreetAddress,
       br(),
-      "House District: ", as.character(mhvillage_df$`House district`),
-      br(),
-      "Senate District: ", as.character(mhvillage_df$`Senate district`),
-      br(),
+      # "House District: ", as.character(mhvillage_df$`House district`),
+      # br(),
+      # "Senate District: ", as.character(mhvillage_df$`Senate district`),
+      # br(),
       "Source: MHVillage"
     )
-    # Add your specific code to build the Marker MHVillage layer
     map <- map %>% addMarkers(lng = as.numeric(mhvillage_df$longitude), 
                               lat = as.numeric(mhvillage_df$latitude),
                               group = "MHVillage Markers (includes site info)",
@@ -113,26 +130,24 @@ build_marker_layer <- function(map, layer_name) {
                               clusterOptions = markerClusterOptions())
   } else if (layer_name == "LARA Markers (includes site info)") {
     lara_df$label <- paste(
-      "Name: ", ifelse(lara_df$DBA != "", lara_df$DBA, lara_df$`Owner / Community_Name`),
+      "Name: ", ifelse(!is.na(lara_df$DBA), lara_df$DBA, lara_df$`Owner / Community_Name`),
       br(),
-      "Sites: ", as.character(lara_df$`Total_#_Sites`),
+      "Sites: ", as.integer(lara_df$`Total_#_Sites`),
       br(),
       "Address: ", lara_df$Location_Address,
       br(),
-      "House District: ", as.character(lara_df$`House district`),
+      "House District: ", as.integer(lara_df$`House district`),
       br(),
-      "Senate District: ", as.character(lara_df$`Senate district`),
+      "Senate District: ", as.integer(lara_df$`Senate district`),
       br(),
       "Source: LARA"
     )
-    # Add your specific code to build the Marker LARA layer
     map <- map %>% addMarkers(lng = as.numeric(lara_df$longitude), 
                               lat = as.numeric(lara_df$latitude), 
                               group = "LARA Markers (includes site info)",
                               popup = lara_df$label,
                               clusterOptions = markerClusterOptions())
   } else if (layer_name == "MHVillage Circles (location only)") {
-    # Add your specific code to build the Circle MHVillage layer
     map <- map %>% addCircleMarkers(lng = as.numeric(mhvillage_df$longitude), 
                                     lat = as.numeric(mhvillage_df$latitude),
                                     color = "orange",
@@ -141,7 +156,6 @@ build_marker_layer <- function(map, layer_name) {
                                     fillOpacity = 1,
                                     group = "MHVillage Circles (location only)")
   } else if (layer_name == "LARA Circles (location only)") {
-    # Add your specific code to build the Circle LARA layer
     map <- map %>% addCircleMarkers(lng = as.numeric(lara_df$longitude), 
                                     lat = as.numeric(lara_df$latitude),
                                     color = "blue",
@@ -154,11 +168,12 @@ build_marker_layer <- function(map, layer_name) {
 }
 
 
-ui <- navbarPage(
+#Most Important Thing PART 1
+#creates the "template" on which all of the features sit
+ui <- navbarPage( 
   imageOutput("mhaction_logo", inline = TRUE),
   # First tab with existing content
   
-  # Additional tabs
   tabPanel(
     "Map Tool",
     fluidPage(
@@ -205,7 +220,7 @@ ui <- navbarPage(
         )
       )
     )),
-  
+  #About page UI
   tabPanel(
     "About",
     page_fillable(
@@ -224,8 +239,8 @@ ui <- navbarPage(
             In May 2024, INFORMs transitioned the project to the Community Technical Assistance Collaborative under the Ginsberg Center for Community Service and Learning. 
             The new development team aimed to improve the number of users allowed on the webpage, transitioning the webpage to GitHub pages. This allows for easy access to source data and code files in the future, as well as improved deployment capacity.
              Additional functional capabilities were added, including downloadable .csv files, user interface (UI) improvements, and data visibility. Package versioning was not optimized under the Python Shiny GitHub Pages website, so the app was re-written in RShiny using the automatic deployment tool."),
-        p("Two sources of data were used to create this application. Michigan Department of Licensing and Regulatory Affairs (LARA) data was obtained by a FOIA request January 2025. This contains a complete list of MHC's in the state of Michigan, per state regulatory guidelines for registration. 
-            MHVillage data was obtained from the website in February 2025. The data sources can differ significantly, including by MHC name and management, and MHVillage data is typically incomplete. However, it is important to include data from both sources, as 
+        p("Two sources of data were used to create this application. Michigan Department of Licensing and Regulatory Affairs (LARA) data was obtained by a FOIA request January 2026. This contains a complete list of MHC's in the state of Michigan, per state regulatory guidelines for registration. 
+            MHVillage data was obtained from the website in February 2024. The data sources can differ significantly, including by MHC name and management, and MHVillage data is typically incomplete. However, it is important to include data from both sources, as 
             this enhances the reliability and accuracy of the map visualization tool by allowing users to cross-verify information and identify discrepancies."),
         p("Please note that data is updated annually."),
         p("State House and Senate districting information is essential to help identify legislators and communities most significantly impacted by laws surrounding Manufactured Housing Communities. State districting information was based off of the 2021 Linden (State Senate) and Hickory (State House) maps. 
@@ -250,7 +265,7 @@ ui <- navbarPage(
         br(), "LARA: Michigan Department of Licensing and Regulatory Affairs. Michigan MHC's are required to register with LARA.",
         br(), "MHVillage: Online marketplace for buying and selling manufactured homes. Data may be incomplete."))),
   
-  
+#Infographics page UI
   tabPanel(
     "Infographics",
     fluidPage(
@@ -261,19 +276,20 @@ ui <- navbarPage(
           card(
             "Infographics show selected county information from the LARA and MHVillage datasets. A csv file is available for all rows of data.",
             downloadLink("info1", "Download all LARA county site counts as .csv file."),
-            # downloadLink("info2", "Download all MHVillage average rents by county as .csv file.")
+            downloadLink("info2", "Download all MHVillage average rents by county as .csv file.")
           )
         ),
         column(
           width = 8,
           card(
             plotOutput("infographic1"),
-            # plotOutput("infographic2")
+            plotOutput("infographic2")
           )
         )
       )
     )),
   
+#Site List Tables Page UI
   tabPanel(
     "MHC Site List Tables",
     fluidPage(
@@ -288,11 +304,11 @@ ui <- navbarPage(
             h6("Site List Summary"),
             tableOutput("site_list_summary"),
             downloadButton("site_list_download", "Download Site List"),
-            br(), br(),
-            h5("Interested in the full district communities?"),
-            downloadLink("mhvillage_all", "Download MHVillage data"),
-            br(),
-            downloadLink("lara_all", "Download LARA data")
+            # br(), br(),
+            # h5("Interested in the full district communities?"),
+            # downloadLink("mhvillage_all", "Download MHVillage data"),
+            # br(),
+            # downloadLink("lara_all", "Download LARA data")
           )
         ),
         column(
@@ -302,6 +318,7 @@ ui <- navbarPage(
       )
     )),
   
+#Other page UI
   tabPanel(
     "Other",
     page_fillable(
@@ -309,9 +326,7 @@ ui <- navbarPage(
       layout_columns(
         card(
           card_title("Credits"),
-          p("This website was built by Vicky Wang and Jiwon Suh with the Community Technical Assistance Collaborative in partnership with MHAction."),
-          p("A previous version, hosted on GitHub Pages with limited functionality is available ",
-            a("here.", href = "https://viwaumich.github.io/mhc/", target = "_blank")),
+          p("This website was built by Vicky Wang and Jeewon Suh with the Community Technical Assistance Collaborative in partnership with MHAction."),
           p("Inspired by a ",
             a("project ", href = "https://hessakh.shinyapps.io/michigan_housing1/", target = "_blank"),
             "created by INFORMs at the University of Michigan."),
@@ -321,7 +336,7 @@ ui <- navbarPage(
              p(
                downloadLink("mhvillage_raw", "MHVillage Raw Data (.csv)"),
                br(),
-               downloadLink("lara_raw", "LARA Raw Data (.csv)"),
+               downloadLink("lara_raw", "LARA Raw Data 2026 (.csv)"),
                br(),
                downloadLink("house_geojson", "MI State House Districts 2021 (.json)"),
                br(),
@@ -337,31 +352,36 @@ ui <- navbarPage(
 )
 
 
+#Most Important PART 2
+# actually reflects the changes made in the UI on the resulting website
 server <- function(input, output, session) {
   
+  #creates an empty list
   circlelist_mh <- list()
   mklist_mh <- list()
   circlelist_lara <- list()
   mklist_lara <- list()
   
-  output$mhvillage_all <- downloadHandler(
-    filename = function() {
-      paste("mhvillage_all", Sys.Date(), ".csv", sep = "")
-    },
-    content = function(file) {
-      write.csv(mhvillage_simple, file, row.names = FALSE)
-    }
-  )
+  #lets you download all mhvillage data
+  # output$mhvillage_all <- downloadHandler(
+  #   filename = function() {
+  #     paste("mhvillage_all", Sys.Date(), ".csv", sep = "")
+  #   },
+  #   content = function(file) {
+  #     write.csv(mhvillage_simple, file, row.names = FALSE)
+  #   }
+  # )
   
-  output$lara_all <- downloadHandler(
-    filename = function() {
-      paste("lara_all", Sys.Date(), ".csv", sep = "")
-    },
-    content = function(file) {
-      write.csv(lara_simple, file, row.names = FALSE)
-    }
-  )
+  # output$lara_all <- downloadHandler(
+  #   filename = function() {
+  #     paste("lara_all", Sys.Date(), ".csv", sep = "")
+  #   },
+  #   content = function(file) {
+  #     write.csv(lara_simple, file, row.names = FALSE)
+  #   }
+  # )
   
+  #renders the logos onto the website
   output$ctac_logo <- renderImage({
     
     list(src = "ctac_logo.png",
@@ -390,7 +410,7 @@ server <- function(input, output, session) {
     
   }, deleteFile = F)
   
-  
+  #renders the map based on selections in the UI
   output$leafletMap <- renderLeaflet({
     leaflet() %>%
       addTiles() %>%
@@ -401,7 +421,7 @@ server <- function(input, output, session) {
         opacity = 1,
         color = "green",
         fillOpacity = 0.4,
-        label = ~paste0("House District: ", NAME),
+        label = ~paste0("House District: ", as.integer(NAME)),
         labelOptions = labelOptions(
           style = list("color" = "black", "font-size" = "12px"),
           textOnly = TRUE
@@ -420,7 +440,7 @@ server <- function(input, output, session) {
         opacity = 1,
         color = "purple",
         fillOpacity = 0.4,
-        label = ~paste0("Senate District: ", NAME),
+        label = ~paste0("Senate District: ", as.integer(NAME)),
         labelOptions = labelOptions(
           style = list("color" = "black", "font-size" = "12px"),
           textOnly = TRUE
@@ -440,7 +460,7 @@ server <- function(input, output, session) {
       hideGroup(c("House Districts", "Senate Districts"))
   })
   
-  
+  #updates layers and clusters based on UI selections that occur
   observeEvent(input$layerlist, {
     leafletProxy("leafletMap") %>%
       clearMarkers() %>% 
@@ -455,6 +475,7 @@ server <- function(input, output, session) {
     }
   })
   
+  #renders both infographics
   output$infographic1 <- renderPlot({
     build_infographics1(lara_df)
   })
@@ -464,6 +485,7 @@ server <- function(input, output, session) {
     build_infographics1(lara_df)
   })
   
+  #renders site list
   total_sites_by_county <- lara_df %>%
     filter(!is.na(`Total_#_Sites`)) %>%
     group_by(County) %>%
@@ -479,31 +501,31 @@ server <- function(input, output, session) {
     }
   )
   
-  # output$infographic2 <- renderPlot({
-  #   build_infographics2(mhvillage_df)
-  # })
+  output$infographic2 <- renderPlot({
+    build_infographics2(mhvillage_df)
+  })
   
-  # total_sites_by_name <- mhvillage_df %>%
-  #   group_by(County) %>%
-  #   summarise(Average_rent = mean(Average_rent, na.rm = TRUE)) %>%
-  #   arrange(Average_rent)
-  # 
-  # df_clean <- mhvillage_df %>%
-  #   select(County, Average_rent)
-  # 
-  # county_counts <- df_clean %>%
-  #   count(County)
-  # 
-  # total_sites_by_name_count <- merge(total_sites_by_name, county_counts, by = "County")
-  # 
-  # output$info2 <- downloadHandler(
-  #   filename = function() {
-  #     paste("mhvillage_avg_rents_", Sys.Date(), ".csv", sep = "")
-  #   },
-  #   content = function(file) {
-  #     write.csv(total_sites_by_name_count, file, row.names = FALSE)
-  #   }
-  # )
+  total_sites_by_name <- mhvillage_df %>%
+    group_by(County) %>%
+    summarise(Average_rent = mean(Average_rent, na.rm = TRUE)) %>%
+    arrange(Average_rent)
+  
+  df_clean <- mhvillage_df %>%
+    select(County, Average_rent)
+  
+  county_counts <- df_clean %>%
+    count(County)
+  
+  total_sites_by_name_count <- merge(total_sites_by_name, county_counts, by = "County")
+  
+  output$info2 <- downloadHandler(
+    filename = function() {
+      paste("mhvillage_avg_rents_", Sys.Date(), ".csv", sep = "")
+    },
+    content = function(file) {
+      write.csv(total_sites_by_name_count, file, row.names = FALSE)
+    }
+  )
   
   observeEvent(input$main_category, {
     if (input$datasource == 'MHVillage') {
@@ -522,6 +544,7 @@ server <- function(input, output, session) {
     
     updateSelectInput(session, "sub_category", choices = subcategory_choices)
   })
+  
   
   output$sub_category_ui <- renderUI({
     selectInput("sub_category", "Select County/District Boundary:", choices = c())
@@ -625,31 +648,33 @@ server <- function(input, output, session) {
   })
   
   
-  # output$infographic2 <- renderPlot({
-  #   build_infographics2(mhvillage_df)
-  # })
+  output$infographic2 <- renderPlot({
+    build_infographics2(mhvillage_df)
+  })
   
-  # total_sites_by_name <- mhvillage_df %>%
-  #   group_by(County) %>%
-  #   summarise(Average_rent = mean(Average_rent, na.rm = TRUE)) %>%
-  #   arrange(Average_rent)
-  # 
-  # df_clean <- mhvillage_df %>%
-  #   select(County, Average_rent)
-  # 
-  # county_counts <- df_clean %>%
-  #   count(County)
-  # 
-  # total_sites_by_name_count <- merge(total_sites_by_name, county_counts, by = "County")
-  # 
-  # output$info2 <- downloadHandler(
-  #   filename = function() {
-  #     paste("mhvillage_avg_rents_", Sys.Date(), ".csv", sep = "")
-  #   },
-  #   content = function(file) {
-  #     write.csv(total_sites_by_name_count, file, row.names = FALSE)
-  #   }
-  # )
+  
+  total_sites_by_name <- mhvillage_df %>%
+    group_by(County) %>%
+    summarise(Average_rent = mean(Average_rent, na.rm = TRUE)) %>%
+    arrange(Average_rent)
+  
+  df_clean <- mhvillage_df %>%
+    select(County, Average_rent)
+  
+  county_counts <- df_clean %>%
+    count(County)
+  
+  total_sites_by_name_count <- merge(total_sites_by_name, county_counts, by = "County")
+  
+  
+  output$info2 <- downloadHandler(
+    filename = function() {
+      paste("mhvillage_avg_rents_", Sys.Date(), ".csv", sep = "")
+    },
+    content = function(file) {
+      write.csv(total_sites_by_name_count, file, row.names = FALSE)
+    }
+  )
   
   observeEvent(input$main_category, {
     if (input$datasource == 'MHVillage') {
@@ -721,7 +746,8 @@ server <- function(input, output, session) {
       
       df <- df %>%
         arrange(desc(`Number of Sites`)) %>%
-        mutate(`Number of Sites` = as.integer(`Number of Sites`))
+        mutate(`Number of Sites` = as.integer(`Number of Sites`)) %>%
+        select(Name, Address, `Number of Sites`)
     }
     
     return(df)
